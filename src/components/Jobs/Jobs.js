@@ -1,6 +1,9 @@
 import Cookie from 'js-cookie'
 import {Component} from 'react'
 import {BiSearchAlt2} from 'react-icons/bi'
+import {AiTwotoneStar} from 'react-icons/ai'
+import {MdLocationOn} from 'react-icons/md'
+import {BsFillBriefcaseFill} from 'react-icons/bs'
 import Header from '../Header/Header'
 import Profile from '../Profile/Profile'
 import './Jobs.css'
@@ -8,14 +11,44 @@ import './Jobs.css'
 class Jobs extends Component {
   state = {
     employmentType: [],
+    salaryRangeRequired: undefined,
+    searchValue: undefined,
+    jobsList: [],
+  }
+
+  componentDidMount() {
+    this.getJobsList()
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    const {employmentType, salaryRangeRequired, searchValue} = this.state
+    if (
+      prevState.employmentType.length !== employmentType.length ||
+      prevState.salaryRangeRequired !== salaryRangeRequired ||
+      prevState.searchValue !== searchValue
+    ) {
+      this.getJobsList()
+    }
   }
 
   getJobsList = async () => {
     const {employmentType, salaryRangeRequired, searchValue} = this.state
-    const url = `https://apis.ccbp.in/jobs
-    ?employment_type=${employmentType.join()}
-    &minimum_package=${salaryRangeRequired}
-    &search=${searchValue}`
+    let filtered = false
+    let url = 'https://apis.ccbp.in/jobs'
+    if (employmentType.length !== 0) {
+      url += `?employment_type=${employmentType.join()}`
+      filtered = true
+    }
+    if (salaryRangeRequired !== undefined) {
+      url += filtered ? '&' : '?'
+      url += `minimum_package=${salaryRangeRequired}`
+      filtered = true
+    }
+    if (searchValue !== undefined) {
+      url += filtered ? '&' : '?'
+      url += `search=${searchValue}`
+      filtered = true
+    }
     const options = {
       headers: {
         Authorization: `Bearer ${Cookie.get('jwt_token')}`,
@@ -35,13 +68,21 @@ class Jobs extends Component {
       rating: eachItem.rating,
       title: eachItem.title,
     }))
-    console.log(jobsList)
+    this.setState({jobsList})
   }
 
   checkChanged = event => {
-    this.setState(prevState => ({
-      employmentType: [event.target.id, ...prevState.employmentType],
-    }))
+    if (event.target.checked) {
+      this.setState(prevState => ({
+        employmentType: [...prevState.employmentType, event.target.id],
+      }))
+    } else {
+      this.setState(prevState => ({
+        employmentType: prevState.employmentType.filter(
+          eachItem => eachItem !== event.target.id,
+        ),
+      }))
+    }
   }
 
   radioChanged = event => {
@@ -54,7 +95,8 @@ class Jobs extends Component {
 
   render() {
     const {employmentTypesList, salaryRangesList} = this.props
-    this.getJobsList()
+    const {jobsList} = this.state
+
     return (
       <>
         <Header />
@@ -122,6 +164,38 @@ class Jobs extends Component {
               <button type="button" className="jobs-search-button">
                 <BiSearchAlt2 className="jobs-search-icon" />
               </button>
+            </div>
+            <div className="jobs-container">
+              {jobsList.map(eachItem => (
+                <div className="job-container">
+                  <div className="job-heading-container">
+                    <img
+                      src={eachItem.companyLogoUrl}
+                      alt="job-company-logo"
+                      className="job-company-logo"
+                    />
+                    <div className="job-title-container">
+                      <h1 className="job-title">{eachItem.title}</h1>
+                      <div className="job-rating-container">
+                        <AiTwotoneStar className="job-rating-icon" />
+                        <p className="job-rating">{eachItem.rating}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="job-details-container">
+                    <div className="job-location-type-container">
+                      <MdLocationOn className="job-details-icon" />
+                      <p className="job-details">{eachItem.location}</p>
+                      <BsFillBriefcaseFill className="job-details-icon job-type-icon" />
+                      <p className="job-details">{eachItem.employmentType}</p>
+                    </div>
+                    <p className="package">{eachItem.packagePerAnnum}</p>
+                  </div>
+                  <hr className="job-container-line" />
+                  <h1 className="job-description-heading">Description</h1>
+                  <p className="job-description">{eachItem.jobDescription}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
